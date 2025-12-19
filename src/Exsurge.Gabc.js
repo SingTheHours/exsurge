@@ -66,7 +66,7 @@ import * as Neumes from "./Exsurge.Chant.Neumes.js";
 var __syllablesRegex = /(?=\S)((?:<v>[\s\S]*<\/v>|[^(])*)(?:\(?([^)]*)\)?)?/g
 var __altTranslationRegex = /<alt>(.*?)<\/alt>|\[(alt:)?(.*?)\]/g;
 
-var __notationsRegex = /z0|z|Z|(::|(?::|[,;][1-8]?|`)_?)|(?:[cfg]|cb|treble-?)[1-5]|\/+| |\!|-?[a-mA-M][oOwWvVrRsxy#~\+><_\.'012345]*(?:\[[^\]]*\]?)*|\{([^}]+)\}?/g;
+var __notationsRegex = /z0|z|Z|(::|(?::|[,;][1-8]?|`)_?)|(?:treble-[abcdefg](?:-sharp|-flat)?-?|[cfg]|cb|treble-?)[1-5]|\/+| |\!|-?[a-mA-M][oOwWvVrRsxy#~\+><_\.'012345]*(?:\[[^\]]*\]?)*|\{([^}]+)\}?/g;
 var __notationsRegex_group_bar = 1;
 var __notationsRegex_group_insideBraces = 2;
 
@@ -998,6 +998,279 @@ export class Gabc {
         case "f5":
           addNotation((ctxt.activeClef = new FaClef(2 * parseInt(atom[1], 10) - 1, 2)));
           break;
+        case "treble-c2":
+        case "treble-c-2":
+          {
+            const line = 2 * parseInt(atom.slice(-1), 10) - 1;
+            addNotation((ctxt.activeClef = new TrebleClef(line, 2, null, atom[8] === '-')));
+          }
+          break;
+        case "treble-g2":
+        case "treble-g-2":
+          {
+            const line = 2 * parseInt(atom.slice(-1), 10) - 1;
+            addNotation(
+              (ctxt.activeClef = new TrebleClef(
+                line,
+                2,
+                [
+                  new Signs.Accidental(line + 6, Signs.AccidentalType.Sharp),
+                ],
+                atom[8] === '-')
+              )
+            );
+          }
+          break;
+        case "treble-d2":
+        case "treble-d-2":
+          {
+            const line = 2 * parseInt(atom.slice(-1), 10) - 1;
+            addNotation(
+              (ctxt.activeClef = new TrebleClef(
+                line,
+                2,
+                [
+                  new Signs.Accidental(line + 6, Signs.AccidentalType.Sharp),
+                  new Signs.Accidental(line + 3, Signs.AccidentalType.Sharp)
+                ],
+                atom[8] === '-')
+              )
+            );
+          }
+          break;
+        case "treble-a2":
+        case "treble-a-2":
+          {
+            const line = 2 * parseInt(atom.slice(-1), 10) - 1;
+            addNotation(
+              (ctxt.activeClef = new TrebleClef(
+                line,
+                2,
+                [
+                  new Signs.Accidental(line + 6, Signs.AccidentalType.Sharp),
+                  new Signs.Accidental(line + 3, Signs.AccidentalType.Sharp),
+                  new Signs.Accidental(line + 7, Signs.AccidentalType.Sharp)
+                ],
+                atom[8] === '-')
+              )
+            );
+          }
+          break;
+        case "treble-e2":
+        case "treble-e-2":
+          {
+            const line = 2 * parseInt(atom.slice(-1), 10) - 1;
+            addNotation(
+              (ctxt.activeClef = new TrebleClef(
+                line,
+                2,
+                [
+                  new Signs.Accidental(line + 6, Signs.AccidentalType.Sharp),
+                  new Signs.Accidental(line + 3, Signs.AccidentalType.Sharp),
+                  new Signs.Accidental(line + 7, Signs.AccidentalType.Sharp),
+                  new Signs.Accidental(line + 4, Signs.AccidentalType.Sharp)
+                ],
+                atom[8] === '-')
+              )
+            );
+          }
+          break;
+        case "treble-b2":
+        case "treble-b-2":
+          {
+            const line = 2 * parseInt(atom.slice(-1), 10) - 1;
+            addNotation(
+              (ctxt.activeClef = new TrebleClef(
+                line,
+                2,
+                [
+                  new Signs.Accidental(line + 6, Signs.AccidentalType.Sharp),
+                  new Signs.Accidental(line + 3, Signs.AccidentalType.Sharp),
+                  new Signs.Accidental(line + 7, Signs.AccidentalType.Sharp),
+                  new Signs.Accidental(line + 4, Signs.AccidentalType.Sharp),
+                  new Signs.Accidental(line + 1, Signs.AccidentalType.Sharp),
+                ],
+                atom[8] === '-')
+              )
+            );
+          }
+          break;
+        case "treble-f-sharp2":
+        case "treble-f-sharp-2":
+          {
+            const line = 2 * parseInt(atom.slice(-1), 10) - 1;
+            addNotation(
+              (ctxt.activeClef = new TrebleClef(
+                line,
+                2,
+                [
+                  new Signs.Accidental(line + 6, Signs.AccidentalType.Sharp),
+                  new Signs.Accidental(line + 3, Signs.AccidentalType.Sharp),
+                  new Signs.Accidental(line + 7, Signs.AccidentalType.Sharp),
+                  new Signs.Accidental(line + 4, Signs.AccidentalType.Sharp),
+                  new Signs.Accidental(line + 1, Signs.AccidentalType.Sharp),
+                  new Signs.Accidental(line + 5, Signs.AccidentalType.Sharp),
+                ],
+                atom[14] === '-')
+              )
+            );
+          }
+          break;
+        case "treble-c-sharp2":
+        case "treble-c-sharp-2":
+          {
+            const line = 2 * parseInt(atom.slice(-1), 10) - 1;
+            addNotation(
+              (ctxt.activeClef = new TrebleClef(
+                line,
+                2,
+                [
+                  new Signs.Accidental(line + 6, Signs.AccidentalType.Sharp),
+                  new Signs.Accidental(line + 3, Signs.AccidentalType.Sharp),
+                  new Signs.Accidental(line + 7, Signs.AccidentalType.Sharp),
+                  new Signs.Accidental(line + 4, Signs.AccidentalType.Sharp),
+                  new Signs.Accidental(line + 1, Signs.AccidentalType.Sharp),
+                  new Signs.Accidental(line + 5, Signs.AccidentalType.Sharp),
+                  new Signs.Accidental(line + 2, Signs.AccidentalType.Sharp),
+                ],
+                atom[14] === '-')
+              )
+            );
+          }
+          break;
+        case "treble-f2":
+        case "treble-f-2":
+          {
+            const line = 2 * parseInt(atom.slice(-1), 10) - 1;
+            addNotation(
+              (ctxt.activeClef = new TrebleClef(
+                line,
+                2,
+                [
+                  new Signs.Accidental(line + 2, Signs.AccidentalType.Flat)
+                ],
+                atom[8] === '-')
+              )
+            );
+          }
+          break;
+        case "treble-b-flat2":
+        case "treble-b-flat-2":
+          {
+            const line = 2 * parseInt(atom.slice(-1), 10) - 1;
+            addNotation(
+              (ctxt.activeClef = new TrebleClef(
+                line,
+                2,
+                [
+                  new Signs.Accidental(line + 2, Signs.AccidentalType.Flat),
+                  new Signs.Accidental(line + 5, Signs.AccidentalType.Flat),
+                ],
+                atom[13] === '-')
+              )
+            );
+          }
+          break;
+        case "treble-e-flat2":
+        case "treble-e-flat-2":
+          {
+            const line = 2 * parseInt(atom.slice(-1), 10) - 1;
+            addNotation(
+              (ctxt.activeClef = new TrebleClef(
+                line,
+                2,
+                [
+                  new Signs.Accidental(line + 2, Signs.AccidentalType.Flat),
+                  new Signs.Accidental(line + 5, Signs.AccidentalType.Flat),
+                  new Signs.Accidental(line + 1, Signs.AccidentalType.Flat),
+                ],
+                atom[13] === '-')
+              )
+            );
+          }
+          break;
+        case "treble-a-flat2":
+        case "treble-a-flat-2":
+          {
+            const line = 2 * parseInt(atom.slice(-1), 10) - 1;
+            addNotation(
+              (ctxt.activeClef = new TrebleClef(
+                line,
+                2,
+                [
+                  new Signs.Accidental(line + 2, Signs.AccidentalType.Flat),
+                  new Signs.Accidental(line + 5, Signs.AccidentalType.Flat),
+                  new Signs.Accidental(line + 1, Signs.AccidentalType.Flat),
+                  new Signs.Accidental(line + 4, Signs.AccidentalType.Flat),
+                ],
+                atom[13] === '-')
+              )
+            );
+          }
+          break;
+        case "treble-d-flat2":
+        case "treble-d-flat-2":
+          {
+            const line = 2 * parseInt(atom.slice(-1), 10) - 1;
+            addNotation(
+              (ctxt.activeClef = new TrebleClef(
+                line,
+                2,
+                [
+                  new Signs.Accidental(line + 2, Signs.AccidentalType.Flat),
+                  new Signs.Accidental(line + 5, Signs.AccidentalType.Flat),
+                  new Signs.Accidental(line + 1, Signs.AccidentalType.Flat),
+                  new Signs.Accidental(line + 4, Signs.AccidentalType.Flat),
+                  new Signs.Accidental(line, Signs.AccidentalType.Flat),
+                ],
+                atom[13] === '-')
+              )
+            );
+          }
+          break;
+        case "treble-g-flat2":
+        case "treble-g-flat-2":
+          {
+            const line = 2 * parseInt(atom.slice(-1), 10) - 1;
+            addNotation(
+              (ctxt.activeClef = new TrebleClef(
+                line,
+                2,
+                [
+                  new Signs.Accidental(line + 2, Signs.AccidentalType.Flat),
+                  new Signs.Accidental(line + 5, Signs.AccidentalType.Flat),
+                  new Signs.Accidental(line + 1, Signs.AccidentalType.Flat),
+                  new Signs.Accidental(line + 4, Signs.AccidentalType.Flat),
+                  new Signs.Accidental(line, Signs.AccidentalType.Flat),
+                  new Signs.Accidental(line + 3, Signs.AccidentalType.Flat),
+                ],
+                atom[13] === '-')
+              )
+            );
+          }
+          break;
+        case "treble-c-flat2":
+        case "treble-c-flat-2":
+          {
+            const line = 2 * parseInt(atom.slice(-1), 10) - 1;
+            addNotation(
+              (ctxt.activeClef = new TrebleClef(
+                line,
+                2,
+                [
+                  new Signs.Accidental(line + 2, Signs.AccidentalType.Flat),
+                  new Signs.Accidental(line + 5, Signs.AccidentalType.Flat),
+                  new Signs.Accidental(line + 1, Signs.AccidentalType.Flat),
+                  new Signs.Accidental(line + 4, Signs.AccidentalType.Flat),
+                  new Signs.Accidental(line, Signs.AccidentalType.Flat),
+                  new Signs.Accidental(line + 3, Signs.AccidentalType.Flat),
+                  new Signs.Accidental(line - 1, Signs.AccidentalType.Flat),
+                ],
+                atom[13] === '-')
+              )
+            );
+          }
+          break;
         case "treble1":
         case "treble2":
         case "treble3":
@@ -1021,7 +1294,7 @@ export class Gabc {
               (ctxt.activeClef = new DoClef(
                 line,
                 2,
-                new Signs.Accidental(line - 1, Signs.AccidentalType.Flat)
+                [new Signs.Accidental(line - 1, Signs.AccidentalType.Flat)]
               ))
             );
           }

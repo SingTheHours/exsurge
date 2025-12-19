@@ -268,10 +268,18 @@ export class Accidental extends ChantNotationElement {
         glyphCode = GlyphCode.Natural;
         break;
       case AccidentalType.Sharp:
-        glyphCode = GlyphCode.Sharp;
+        if (ctxt.modernAccidentals) {
+          glyphCode = GlyphCode.ModernSharp;
+        } else {
+          glyphCode = GlyphCode.Sharp;
+        }
         break;
       default:
-        glyphCode = GlyphCode.Flat;
+        if (ctxt.modernAccidentals) {
+          glyphCode = GlyphCode.ModernFlat;
+        } else {
+          glyphCode = GlyphCode.Flat;
+        }
         break;
     }
 

@@ -165,19 +165,19 @@ export class Note extends ChantLayoutElement {
 }
 
 export class Clef extends ChantNotationElement {
-  constructor(staffPosition, octave, defaultAccidental = null) {
+  constructor(staffPosition, octave, defaultAccidentals = null) {
     super();
 
     this.isClef = true;
     this.staffPosition = staffPosition;
     this.octave = octave;
-    this.defaultAccidental = defaultAccidental;
-    this.activeAccidental = defaultAccidental;
+    this.defaultAccidentals = defaultAccidentals;
+    this.activeAccidentals = defaultAccidentals;
     this.keepWithNext = true;
   }
 
   resetAccidentals() {
-    this.activeAccidental = this.defaultAccidental;
+    this.activeAccidentals = this.defaultAccidentals;
   }
 
   pitchToStaffPosition(pitch) {}
@@ -185,18 +185,24 @@ export class Clef extends ChantNotationElement {
   performLayout(ctxt) {
     ctxt.activeClef = this;
 
-    if (this.defaultAccidental) this.defaultAccidental.performLayout(ctxt);
+    if (this.defaultAccidentals) {
+      for (const accidental of this.defaultAccidentals) {
+        accidental.performLayout(ctxt);
+      }
+    }
 
     super.performLayout(ctxt);
   }
 
   finishLayout(ctxt) {
-    // if we have a default accidental, then add a glyph for it now
-    if (this.defaultAccidental) {
-      var accidentalGlyph = this.defaultAccidental.createGlyphVisualizer(ctxt);
-      accidentalGlyph.bounds.x +=
-        this.visualizers[0].bounds.right() + ctxt.intraNeumeSpacing;
-      this.addVisualizer(accidentalGlyph);
+    // if we have a default accidentals, then add a glyph for it now
+    if (this.defaultAccidentals) {
+      for (const [index, accidental] of this.defaultAccidentals.entries()) {
+        var accidentalGlyph = accidental.createGlyphVisualizer(ctxt);
+        accidentalGlyph.bounds.x +=
+          this.visualizers[0].bounds.right() + accidentalGlyph.bounds.width * (index + 1) + ctxt.intraNeumeSpacing;
+        this.addVisualizer(accidentalGlyph);
+      }
     }
 
     super.finishLayout(ctxt);
@@ -211,7 +217,7 @@ export class Clef extends ChantNotationElement {
     let clone = new this.constructor(
       this.staffPosition,
       this.octave,
-      this.defaultAccidental
+      this.defaultAccidentals
     );
     clone.small = this.small;
     clone.sourceGabc = this.sourceGabc;
@@ -223,8 +229,8 @@ export class Clef extends ChantNotationElement {
 }
 
 export class DoClef extends Clef {
-  constructor(staffPosition, octave, defaultAccidental = null) {
-    super(staffPosition, octave, defaultAccidental);
+  constructor(staffPosition, octave, defaultAccidentals = null) {
+    super(staffPosition, octave, defaultAccidentals);
 
     this.leadingSpace = 0;
   }
@@ -244,11 +250,13 @@ export class DoClef extends Clef {
 
     var step = Pitch.staffOffsetToStep(offset);
 
-    if (
-      this.activeAccidental &&
-      this.activeAccidental.staffPosition === staffPosition
-    )
-      step += this.activeAccidental.accidentalType;
+    if (this.activeAccidentals) {
+      for (const accidental of this.activeAccidentals) {
+        if (accidental.staffPosition === staffPosition) {
+          step += accidental.accidentalType;
+        }
+      }
+    }
 
     return new Pitch(step, this.octave + octaveOffset);
   }
@@ -267,8 +275,8 @@ export class DoClef extends Clef {
 var __defaultDoClef = new DoClef(7, 2);
 
 export class FaClef extends Clef {
-  constructor(staffPosition, octave, defaultAccidental = null) {
-    super(staffPosition, octave, defaultAccidental);
+  constructor(staffPosition, octave, defaultAccidentals = null) {
+    super(staffPosition, octave, defaultAccidentals);
 
     this.leadingSpace = 0;
   }
@@ -288,11 +296,13 @@ export class FaClef extends Clef {
 
     var step = Pitch.staffOffsetToStep(offset);
 
-    if (
-      this.activeAccidental &&
-      this.activeAccidental.staffPosition === staffPosition
-    )
-      step += this.activeAccidental.accidentalType;
+    if (this.activeAccidentals) {
+      for (const accidental of this.activeAccidentals) {
+        if (accidental.staffPosition === staffPosition) {
+          step += accidental.accidentalType;
+        }
+      }
+    }
 
     return new Pitch(step, this.octave + octaveOffset);
   }
@@ -309,8 +319,8 @@ export class FaClef extends Clef {
 }
 
 export class TrebleClef extends Clef {
-  constructor(staffPosition, octave, defaultAccidental = null, small = false) {
-    super(staffPosition, octave, defaultAccidental);
+  constructor(staffPosition, octave, defaultAccidentals = null, small = false) {
+    super(staffPosition, octave, defaultAccidentals);
 
     this.leadingSpace = 0;
     this.small = small;
@@ -331,11 +341,13 @@ export class TrebleClef extends Clef {
 
     var step = Pitch.staffOffsetToStep(offset);
 
-    if (
-      this.activeAccidental &&
-      this.activeAccidental.staffPosition === staffPosition
-    )
-      step += this.activeAccidental.accidentalType;
+    if (this.activeAccidentals) {
+      for (const accidental of this.activeAccidentals) {
+        if (accidental.staffPosition === staffPosition) {
+          step += accidental.accidentalType;
+        }
+      }
+    }
 
     return new Pitch(step, this.octave + octaveOffset);
   }

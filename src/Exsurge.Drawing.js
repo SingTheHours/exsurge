@@ -200,6 +200,7 @@ export let GlyphCode = {
   FaClef: "FaClef",
   TrebleClef: "TrebleClef",
   TrebleClefSmall: "TrebleClefSmall",
+  ModernFlat: "ModernFlat",
   Flat: "Flat",
   Mora: "Mora",
   Natural: "Natural",
@@ -224,6 +225,7 @@ export let GlyphCode = {
   PunctumInclinatumLiquescent: "PunctumInclinatumLiquescent",
   Quilisma: "Quilisma",
 
+  ModernSharp: "ModernSharp",
   Sharp: "Sharp",
   TerminatingAscLiquescent: "TerminatingAscLiquescent",
   TerminatingDesLiquescent: "TerminatingDesLiquescent",
@@ -492,6 +494,7 @@ export class ChantContext {
     if (QuickSvg.hasDOMAccess()) {
       this.defsNode = QuickSvg.createNode("defs");
     }
+    this.modernAccidentals = false;
 
     // font styles
     this.textStyles = {};
