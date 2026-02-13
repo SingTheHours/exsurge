@@ -27,10 +27,13 @@ import { ChantLine } from "./Exsurge.Chant.ChantLine.js";
 import { InsertionCursor } from "./Exsurge.Chant.Signs.js";
 import { Pitch, Rect, Step } from "./Exsurge.Core.js";
 import {
-  Annotation, ChantLayoutElement,
+  Annotation,
+  ChantLayoutElement,
   ChantNotationElement,
   GlyphCode,
-  GlyphVisualizer, QuickSvg, TextLeftRight,
+  GlyphVisualizer,
+  QuickSvg,
+  TextLeftRight,
   TextSpan
 } from "./Exsurge.Drawing.js";
 import { Gabc } from "./Exsurge.Gabc.js";
@@ -200,7 +203,9 @@ export class Clef extends ChantNotationElement {
       for (const [index, accidental] of this.defaultAccidentals.entries()) {
         var accidentalGlyph = accidental.createGlyphVisualizer(ctxt);
         accidentalGlyph.bounds.x +=
-          this.visualizers[0].bounds.right() + accidentalGlyph.bounds.width * (index + 1) + ctxt.intraNeumeSpacing;
+          this.visualizers[0].bounds.right() +
+          accidentalGlyph.bounds.width * (index + 1) +
+          ctxt.intraNeumeSpacing;
         this.addVisualizer(accidentalGlyph);
       }
     }
@@ -355,7 +360,10 @@ export class TrebleClef extends Clef {
   performLayout(ctxt) {
     super.performLayout(ctxt);
 
-    var glyph = new GlyphVisualizer(ctxt, this.small ? GlyphCode.TrebleClefSmall : GlyphCode.TrebleClef);
+    var glyph = new GlyphVisualizer(
+      ctxt,
+      this.small ? GlyphCode.TrebleClefSmall : GlyphCode.TrebleClef
+    );
     glyph.setStaffPosition(ctxt, this.staffPosition);
     this.addVisualizer(glyph);
 
@@ -439,6 +447,7 @@ export class ChantScore {
 
     this.useDropCap = useDropCap;
     this.dropCap = null;
+    this.dropCapLines = 1;
 
     this.annotation = null;
 
@@ -469,6 +478,7 @@ export class ChantScore {
     if (startLine === 0) {
       result.titles = this.titles;
       result.dropCap = this.dropCap;
+      result.dropCapLines = this.dropCapLines;
       result.annotation = this.annotation;
     }
     return result;
@@ -494,9 +504,8 @@ export class ChantScore {
       let element = this.notes[i];
       element.selected = selectedIndices.includes(i);
     }
-    (
-      this.startingClef.model || this.startingClef
-    ).selected = selectedIndices.includes(-1);
+    (this.startingClef.model || this.startingClef).selected =
+      selectedIndices.includes(-1);
     for (let i = 0; i < this.lines.length; ++i) {
       this.lines[i].insertionCursor = null;
     }
@@ -517,7 +526,8 @@ export class ChantScore {
           this.insertionElement = this.insertionElement.neume;
         }
         if (!insertionLine) {
-          insertionLine = this.insertionElement.line || this.lines[this.lines.length - 1];
+          insertionLine =
+            this.insertionElement.line || this.lines[this.lines.length - 1];
         }
         insertionLine.insertionCursor = new InsertionCursor();
       }
@@ -576,7 +586,7 @@ export class ChantScore {
           } else {
             ++nonNoteElementCount;
           }
-          
+
           element.selected = selectedIndices.includes(elementIndex);
         }
       }
@@ -729,7 +739,9 @@ export class ChantScore {
           : [annotation.spans];
       this.overrideTextLeft = new TextLeftRight(ctxt, "", "textLeft");
       if (ctxt.mapAnnotationSpansToTextLeft) {
-        annotationSpans = annotationSpans.map(ctxt.mapAnnotationSpansToTextLeft);
+        annotationSpans = annotationSpans.map(
+          ctxt.mapAnnotationSpansToTextLeft
+        );
       }
       this.overrideTextLeft.spans = ctxt.mergeAnnotationWithTextLeft(
         ...annotationSpans,
@@ -758,6 +770,119 @@ export class ChantScore {
       line.bounds.y = -line.bounds.y + y;
       y += line.bounds.height + spaceBetweenSystems;
     } while (currIndex < this.notations.length);
+
+    // Multi-line drop cap: annotation-first, two-pass layout
+    // The mode annotation position is the constraint; the drop cap sizes to fit
+    // between the annotation bottom and line N's lyric baseline.
+    if (this.dropCapLines > 1 && this.dropCap && this.lines.length >= 2) {
+      var actualDropCapLines = Math.min(this.dropCapLines, this.lines.length);
+      var dcFirstLine = this.lines[0];
+      var dcLastLine = this.lines[actualDropCapLines - 1];
+
+      // Target baseline for the drop cap (in line 1's local coord space via global offset)
+      var targetBaseline =
+        dcLastLine.bounds.y -
+        dcFirstLine.bounds.y +
+        dcLastLine.lyricLineBaseline;
+
+      // Determine the drop cap's top edge: constrained by the annotation's bottom
+      var dropCapTop;
+      if (this.annotation) {
+        // annotation.bounds.y is in line 1's local coords (set during performLayout)
+        // With dominant-baseline:hanging, text extends downward from bounds.y
+        var annotationBottom =
+          this.annotation.bounds.y + this.annotation.bounds.height;
+        var annotationPadding =
+          ctxt.staffInterval * ctxt.textStyles.annotation.padding;
+        dropCapTop = annotationBottom + annotationPadding;
+      } else {
+        // No annotation — use the same top as the single-line drop cap
+        dropCapTop = dcFirstLine.lyricLineBaseline - this.dropCap.origin.y;
+      }
+
+      // Scale the drop cap so it fits from dropCapTop down to the target baseline
+      var desiredOriginY = targetBaseline - dropCapTop;
+      var currentOriginY = this.dropCap.origin.y;
+      var scaleFactor = desiredOriginY / currentOriginY;
+
+      // Resize the drop cap font
+      ctxt.textStyles.dropCap.size = ctxt.textStyles.dropCap.size * scaleFactor;
+      this.dropCap.recalculateMetrics(ctxt);
+      this.dropCap.padding =
+        ctxt.staffInterval * ctxt.textStyles.dropCap.padding;
+
+      // Pass 2: rebuild all lines with the new (wider) drop cap indent
+      this.lines = [];
+      y = width > 0 ? this.titles.layoutTitles(ctxt, width) : 0;
+      currIndex = 0;
+      ctxt.activeClef = this.startingClef;
+
+      do {
+        var line = new ChantLine(this);
+        line.buildFromChantNotationIndex(ctxt, currIndex, width);
+        currIndex = line.notationsStartIndex + line.numNotationsOnLine;
+        line.performLayout(ctxt);
+        line.elementIndex = this.lines.length;
+        this.lines.push(line);
+        line.bounds.y = -line.bounds.y + y;
+        y += line.bounds.height + spaceBetweenSystems;
+      } while (currIndex < this.notations.length);
+
+      // Position the drop cap using final line positions
+      dcFirstLine = this.lines[0];
+      dcLastLine =
+        this.lines[Math.min(actualDropCapLines - 1, this.lines.length - 1)];
+      this.dropCap.bounds.x = dcFirstLine.staffLeft / 2;
+      this.dropCap.bounds.y =
+        dcLastLine.bounds.y -
+        dcFirstLine.bounds.y +
+        dcLastLine.lyricLineBaseline;
+    } else if (this.dropCapLines > 1 && this.dropCap && this.lines.length < 2) {
+      // Chant has fewer lines than dropCapLines — fall back to single-line positioning.
+      // performLayout() deferred positioning when dropCapLines > 1, so we must set it here.
+      var firstLine = this.lines[0];
+      this.dropCap.bounds.x = firstLine.staffLeft / 2;
+      this.dropCap.bounds.y = firstLine.lyricLineBaseline;
+
+      // Also apply the annotation adjustment that performLayout skipped.
+      // performLayout set annotation.bounds.y = staffTop + origin.y; we undo origin.y,
+      // apply the drop-cap-relative adjustment, then re-add origin.y.
+      if (this.annotation) {
+        var baseAnnotationY =
+          this.annotation.bounds.y - this.annotation.origin.y;
+        var lowestPossibleAnnotationY =
+          firstLine.lyricLineBaseline -
+          this.annotation.bounds.height -
+          ctxt.staffInterval * ctxt.textStyles.annotation.padding -
+          this.dropCap.origin.y;
+        if (lowestPossibleAnnotationY < baseAnnotationY) {
+          baseAnnotationY = lowestPossibleAnnotationY;
+        } else {
+          baseAnnotationY = (baseAnnotationY + lowestPossibleAnnotationY) / 2;
+        }
+        this.annotation.bounds.y = baseAnnotationY + this.annotation.origin.y;
+
+        // Expand line bounds if annotation now extends above the current bounds.
+        // After line 760 transformation, bounds.y is positive (translate offset).
+        // The annotation's visual glyph top in local coords = baseAnnotationY
+        // (text position minus origin.y cancels out with the origin.y added above).
+        // currentLocalTop = -(origin.y) is the topmost local coord within bounds.
+        var annotationVisualTop = baseAnnotationY;
+        var currentLocalTop = -firstLine.origin.y;
+        if (annotationVisualTop < currentLocalTop) {
+          var extra = currentLocalTop - annotationVisualTop;
+          firstLine.bounds.height += extra;
+          firstLine.origin.y += extra;
+          firstLine.bounds.y += extra;
+        }
+      }
+    }
+
+    // When dropCapLines > 1, use inline font-size on the drop cap to prevent
+    // CSS cascade issues (all SVGs share the same .dropCap CSS selector).
+    if (this.dropCapLines > 1 && this.dropCap) {
+      this.dropCap.overrideFontSize = ctxt.textStyles.dropCap.size;
+    }
 
     var firstLine = this.lines[0];
 
@@ -819,15 +944,16 @@ export class ChantScore {
         typeof zoom === "number"
           ? zoom * this.bounds.width
           : zoom
-          ? undefined
-          : this.bounds.width,
+            ? undefined
+            : this.bounds.width,
       height = zoom ? undefined : this.bounds.height;
 
     return {
       xmlns: QuickSvg.ns,
       "xmlns:xlink": QuickSvg.xlink,
       version: "1.1",
-      class: "Exsurge ChantScore" + (ctxt.editable ? " EditableChantScore" : ""),
+      class:
+        "Exsurge ChantScore" + (ctxt.editable ? " EditableChantScore" : ""),
       width,
       height,
       viewBox: [0, 0, this.bounds.width, this.bounds.height].join(" ")
@@ -902,9 +1028,42 @@ export class ChantScore {
 
   createSvgNodeForEachLine(ctxt) {
     var node = [];
+    var mergeCount =
+      this.dropCapLines > 1 && this.dropCap && this.lines.length >= 2
+        ? Math.min(this.dropCapLines, this.lines.length)
+        : 0;
 
     var top = 0;
-    for (var i = 0; i < this.lines.length; i++) {
+
+    if (mergeCount > 1) {
+      // Merge first N lines into a single SVG for multi-line drop cap
+      var mergedChildren = [ctxt.defsNode.cloneNode(true)];
+      mergedChildren[0].appendChild(ctxt.createStyleNode());
+      var mergedHeight = 0;
+      for (var i = 0; i < mergeCount; i++) {
+        mergedChildren.push(this.lines[i].createSvgNode(ctxt, 0));
+        mergedHeight += this.lines[i].bounds.height + ctxt.staffInterval * 1.5;
+      }
+      node.push(
+        QuickSvg.createNode(
+          "svg",
+          {
+            xmlns: QuickSvg.ns,
+            version: "1.1",
+            class: "Exsurge ChantScore",
+            width: this.bounds.width,
+            height: mergedHeight,
+            viewBox: [0, 0, this.bounds.width, mergedHeight].join(" ")
+          },
+          QuickSvg.createNode("g", {}, mergedChildren)
+        )
+      );
+      top = mergedHeight;
+    }
+
+    // Remaining lines (or all lines if no merging)
+    var startIdx = mergeCount > 1 ? mergeCount : 0;
+    for (var i = startIdx; i < this.lines.length; i++) {
       var lineFragment = [
         ctxt.defsNode.cloneNode(true),
         this.lines[i].createSvgNode(ctxt, top)
@@ -940,8 +1099,39 @@ export class ChantScore {
     fragmentDefs += ctxt.createStyle();
 
     fragmentDefs = QuickSvg.createFragment("defs", {}, fragmentDefs);
+    var mergeCount =
+      this.dropCapLines > 1 && this.dropCap && this.lines.length >= 2
+        ? Math.min(this.dropCapLines, this.lines.length)
+        : 0;
     var top = 0;
-    for (var i = 0; i < this.lines.length; i++) {
+
+    if (mergeCount > 1) {
+      // Merge first N lines into a single SVG for multi-line drop cap
+      var mergedInner = fragmentDefs;
+      var mergedHeight = 0;
+      for (var i = 0; i < mergeCount; i++) {
+        mergedInner += this.lines[i].createSvgFragment(ctxt, 0);
+        mergedHeight += this.lines[i].bounds.height + ctxt.staffInterval * 1.5;
+      }
+      mergedInner = QuickSvg.createFragment("g", {}, mergedInner);
+      fragment += QuickSvg.createFragment(
+        "svg",
+        {
+          xmlns: QuickSvg.ns,
+          version: "1.1",
+          "xmlns:xlink": QuickSvg.xlink,
+          class: "Exsurge ChantScore",
+          width: this.bounds.width,
+          height: mergedHeight
+        },
+        mergedInner
+      );
+      top = mergedHeight;
+    }
+
+    // Remaining lines (or all lines if no merging)
+    var startIdx = mergeCount > 1 ? mergeCount : 0;
+    for (var i = startIdx; i < this.lines.length; i++) {
       var lineFragment =
         fragmentDefs + this.lines[i].createSvgFragment(ctxt, top);
       var height = this.lines[i].bounds.height + ctxt.staffInterval * 1.5;
