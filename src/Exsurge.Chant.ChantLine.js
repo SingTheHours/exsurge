@@ -449,6 +449,9 @@ export class ChantLine extends ChantLayoutElement {
     top = 0,
     functionNames = { quickSvg: "createNode", elements: "createSvgNode" }
   ) {
+    // Placeholder lines render as blank space (no staff, clef, or notations)
+    if (this.isPlaceholder) return [];
+
     var inner = [];
 
     // add the chant lines
@@ -819,7 +822,7 @@ export class ChantLine extends ChantLayoutElement {
     // set up the clef...
     // if the first notation on the line is a starting clef, then we treat it a little differently...
     // the clef becomes this line's starting clef and we skip over the clef in the notations array
-    if (notations.length && notations[newElementStart].isClef) {
+    if (newElementStart < notations.length && notations[newElementStart].isClef) {
       ctxt.activeClef = notations[newElementStart];
       newElementStart++;
       this.notationsStartIndex++;

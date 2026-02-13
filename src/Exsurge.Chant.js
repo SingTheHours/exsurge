@@ -771,6 +771,21 @@ export class ChantScore {
       y += line.bounds.height + spaceBetweenSystems;
     } while (currIndex < this.notations.length);
 
+    // Force placeholder staff line(s) when dropCapLines > 1 but chant fits on fewer lines.
+    // These are used for drop cap sizing only and removed after positioning.
+    if (this.dropCapLines > 1 && this.dropCap && this.lines.length < this.dropCapLines) {
+      while (this.lines.length < this.dropCapLines) {
+        var emptyLine = new ChantLine(this);
+        emptyLine.buildFromChantNotationIndex(ctxt, this.notations.length, width);
+        emptyLine.performLayout(ctxt);
+        emptyLine.elementIndex = this.lines.length;
+        emptyLine.isPlaceholder = true;
+        this.lines.push(emptyLine);
+        emptyLine.bounds.y = -emptyLine.bounds.y + y;
+        y += emptyLine.bounds.height + spaceBetweenSystems;
+      }
+    }
+
     // Multi-line drop cap: annotation-first, two-pass layout
     // The mode annotation position is the constraint; the drop cap sizes to fit
     // between the annotation bottom and line N's lyric baseline.
@@ -828,6 +843,20 @@ export class ChantScore {
         y += line.bounds.height + spaceBetweenSystems;
       } while (currIndex < this.notations.length);
 
+      // Force placeholder staff line(s) for drop cap sizing (removed after positioning)
+      if (this.lines.length < this.dropCapLines) {
+        while (this.lines.length < this.dropCapLines) {
+          var emptyLine = new ChantLine(this);
+          emptyLine.buildFromChantNotationIndex(ctxt, this.notations.length, width);
+          emptyLine.performLayout(ctxt);
+          emptyLine.elementIndex = this.lines.length;
+          emptyLine.isPlaceholder = true;
+          this.lines.push(emptyLine);
+          emptyLine.bounds.y = -emptyLine.bounds.y + y;
+          y += emptyLine.bounds.height + spaceBetweenSystems;
+        }
+      }
+
       // Position the drop cap using final line positions
       dcFirstLine = this.lines[0];
       dcLastLine =
@@ -837,44 +866,55 @@ export class ChantScore {
         dcLastLine.bounds.y -
         dcFirstLine.bounds.y +
         dcLastLine.lyricLineBaseline;
-    } else if (this.dropCapLines > 1 && this.dropCap && this.lines.length < 2) {
-      // Chant has fewer lines than dropCapLines — fall back to single-line positioning.
-      // performLayout() deferred positioning when dropCapLines > 1, so we must set it here.
-      var firstLine = this.lines[0];
-      this.dropCap.bounds.x = firstLine.staffLeft / 2;
-      this.dropCap.bounds.y = firstLine.lyricLineBaseline;
 
-      // Also apply the annotation adjustment that performLayout skipped.
-      // performLayout set annotation.bounds.y = staffTop + origin.y; we undo origin.y,
-      // apply the drop-cap-relative adjustment, then re-add origin.y.
-      if (this.annotation) {
-        var baseAnnotationY =
-          this.annotation.bounds.y - this.annotation.origin.y;
-        var lowestPossibleAnnotationY =
-          firstLine.lyricLineBaseline -
-          this.annotation.bounds.height -
-          ctxt.staffInterval * ctxt.textStyles.annotation.padding -
-          this.dropCap.origin.y;
-        if (lowestPossibleAnnotationY < baseAnnotationY) {
-          baseAnnotationY = lowestPossibleAnnotationY;
-        } else {
-          baseAnnotationY = (baseAnnotationY + lowestPossibleAnnotationY) / 2;
-        }
-        this.annotation.bounds.y = baseAnnotationY + this.annotation.origin.y;
+      // For single-line chants with placeholder lines: center the drop cap
+      // vertically on the staff and remove the placeholders.
+      if (this.lines.some(function (l) { return l.isPlaceholder; })) {
+        var realLine = this.lines[0];
 
-        // Expand line bounds if annotation now extends above the current bounds.
-        // After line 760 transformation, bounds.y is positive (translate offset).
-        // The annotation's visual glyph top in local coords = baseAnnotationY
-        // (text position minus origin.y cancels out with the origin.y added above).
-        // currentLocalTop = -(origin.y) is the topmost local coord within bounds.
-        var annotationVisualTop = baseAnnotationY;
-        var currentLocalTop = -firstLine.origin.y;
-        if (annotationVisualTop < currentLocalTop) {
-          var extra = currentLocalTop - annotationVisualTop;
-          firstLine.bounds.height += extra;
-          firstLine.origin.y += extra;
-          firstLine.bounds.y += extra;
+        // Center drop cap on staff center (y=0 in line's local coords).
+        // origin.y is the distance from glyph top to baseline, so baseline
+        // at origin.y/2 places the glyph centered on y=0.
+        this.dropCap.bounds.y = this.dropCap.origin.y / 2;
+        var dcTopLocal = -(this.dropCap.origin.y / 2);
+
+        // Move annotation above the centered drop cap (it was positioned
+        // for the 2-line layout and now overlaps the taller drop cap).
+        if (this.annotation) {
+          var annotationPadding =
+            ctxt.staffInterval * ctxt.textStyles.annotation.padding;
+          this.annotation.bounds.y =
+            dcTopLocal - annotationPadding - this.annotation.bounds.height +
+            this.annotation.origin.y;
         }
+
+        // Determine the topmost element (annotation or drop cap)
+        var topLocal = dcTopLocal;
+        if (this.annotation) {
+          var annotVisualTop =
+            this.annotation.bounds.y - this.annotation.origin.y;
+          if (annotVisualTop < topLocal) topLocal = annotVisualTop;
+        }
+
+        // Expand line bounds upward if content extends above current top
+        var currentTopLocal = -realLine.origin.y;
+        if (topLocal < currentTopLocal) {
+          var extraAbove = currentTopLocal - topLocal;
+          realLine.bounds.height += extraAbove;
+          realLine.origin.y += extraAbove;
+          realLine.bounds.y += extraAbove;
+        }
+
+        // Expand line bounds downward if drop cap extends below current bottom
+        var dcBottomLocal = this.dropCap.origin.y / 2;
+        var currentBottomLocal = realLine.bounds.height - realLine.origin.y;
+        if (dcBottomLocal > currentBottomLocal) {
+          realLine.bounds.height += dcBottomLocal - currentBottomLocal;
+        }
+
+        // Remove placeholder lines and reset y for correct total bounds
+        this.lines = this.lines.filter(function (l) { return !l.isPlaceholder; });
+        y = realLine.bounds.y + realLine.bounds.height + spaceBetweenSystems;
       }
     }
 
