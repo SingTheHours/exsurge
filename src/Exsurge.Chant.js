@@ -786,9 +786,10 @@ export class ChantScore {
       }
     }
 
-    // Multi-line drop cap: annotation-first, two-pass layout
-    // The mode annotation position is the constraint; the drop cap sizes to fit
-    // between the annotation bottom and line N's lyric baseline.
+    // Multi-line drop cap: two-pass layout
+    // The drop cap sizes to fill from one staff interval above the top staff
+    // line down to line N's lyric baseline, giving a consistent size for all
+    // letters regardless of glyph metrics or annotation presence.
     if (this.dropCapLines > 1 && this.dropCap && this.lines.length >= 2) {
       var actualDropCapLines = Math.min(this.dropCapLines, this.lines.length);
       var dcFirstLine = this.lines[0];
@@ -800,20 +801,11 @@ export class ChantScore {
         dcFirstLine.bounds.y +
         dcLastLine.lyricLineBaseline;
 
-      // Determine the drop cap's top edge: constrained by the annotation's bottom
-      var dropCapTop;
-      if (this.annotation) {
-        // annotation.bounds.y is in line 1's local coords (set during performLayout)
-        // With dominant-baseline:hanging, text extends downward from bounds.y
-        var annotationBottom =
-          this.annotation.bounds.y + this.annotation.bounds.height;
-        var annotationPadding =
-          ctxt.staffInterval * ctxt.textStyles.annotation.padding;
-        dropCapTop = annotationBottom + annotationPadding;
-      } else {
-        // No annotation — use the same top as the single-line drop cap
-        dropCapTop = dcFirstLine.lyricLineBaseline - this.dropCap.origin.y;
-      }
+      // Fixed top reference: one staff interval above the top staff line.
+      // Staff lines are at i * staffInterval for i = -(staffLineCount*2-1)...-1,
+      // so the top staff line is at -(staffLineCount*2-1) * staffInterval.
+      var staffTopY = -(ctxt.staffLineCount * 2 - 1) * ctxt.staffInterval;
+      var dropCapTop = staffTopY - ctxt.staffInterval;
 
       // Scale the drop cap so it fits from dropCapTop down to the target baseline
       var desiredOriginY = targetBaseline - dropCapTop;
@@ -857,29 +849,25 @@ export class ChantScore {
         }
       }
 
-      // Position the drop cap using final line positions
+      // Position the drop cap: pin visual top at dropCapTop so all letters
+      // start at the same height regardless of glyph metrics.
       dcFirstLine = this.lines[0];
       dcLastLine =
         this.lines[Math.min(actualDropCapLines - 1, this.lines.length - 1)];
       this.dropCap.bounds.x = dcFirstLine.staffLeft / 2;
-      this.dropCap.bounds.y =
-        dcLastLine.bounds.y -
-        dcFirstLine.bounds.y +
-        dcLastLine.lyricLineBaseline;
+      this.dropCap.bounds.y = dropCapTop + this.dropCap.origin.y;
 
-      // For single-line chants with placeholder lines: center the drop cap
-      // vertically on the staff and remove the placeholders.
+      // For single-line chants with placeholder lines: keep the drop cap at
+      // its 2-line position so the staff aligns with the top, then remove
+      // the placeholder lines and expand line 1 bounds to contain the drop cap.
       if (this.lines.some(function (l) { return l.isPlaceholder; })) {
         var realLine = this.lines[0];
 
-        // Center drop cap on staff center (y=0 in line's local coords).
-        // origin.y is the distance from glyph top to baseline, so baseline
-        // at origin.y/2 places the glyph centered on y=0.
-        this.dropCap.bounds.y = this.dropCap.origin.y / 2;
-        var dcTopLocal = -(this.dropCap.origin.y / 2);
+        // Drop cap bounds.y is already set to the 2-line baseline position.
+        // The visual top of the drop cap is near the top of line 1's staff.
+        var dcTopLocal = this.dropCap.bounds.y - this.dropCap.origin.y;
 
-        // Move annotation above the centered drop cap (it was positioned
-        // for the 2-line layout and now overlaps the taller drop cap).
+        // Move annotation above the drop cap
         if (this.annotation) {
           var annotationPadding =
             ctxt.staffInterval * ctxt.textStyles.annotation.padding;
@@ -906,7 +894,7 @@ export class ChantScore {
         }
 
         // Expand line bounds downward if drop cap extends below current bottom
-        var dcBottomLocal = this.dropCap.origin.y / 2;
+        var dcBottomLocal = this.dropCap.bounds.y;
         var currentBottomLocal = realLine.bounds.height - realLine.origin.y;
         if (dcBottomLocal > currentBottomLocal) {
           realLine.bounds.height += dcBottomLocal - currentBottomLocal;
@@ -915,6 +903,23 @@ export class ChantScore {
         // Remove placeholder lines and reset y for correct total bounds
         this.lines = this.lines.filter(function (l) { return !l.isPlaceholder; });
         y = realLine.bounds.y + realLine.bounds.height + spaceBetweenSystems;
+      } else if (this.annotation) {
+        // Reposition annotation just above the full-sized drop cap
+        var dcTop = this.dropCap.bounds.y - this.dropCap.origin.y;
+        var annotationPadding = ctxt.staffInterval * ctxt.textStyles.annotation.padding;
+        this.annotation.bounds.y = dcTop - annotationPadding
+            - this.annotation.bounds.height + this.annotation.origin.y;
+
+        // Expand line 1 bounds upward if annotation extends above current top
+        var annotVisualTop = this.annotation.bounds.y - this.annotation.origin.y;
+        var firstLineTopLocal = -dcFirstLine.origin.y;
+        if (annotVisualTop < firstLineTopLocal) {
+          var extraAbove = firstLineTopLocal - annotVisualTop;
+          dcFirstLine.bounds.height += extraAbove;
+          dcFirstLine.origin.y += extraAbove;
+          dcFirstLine.bounds.y += extraAbove;
+          y += extraAbove;
+        }
       }
     }
 
