@@ -30,6 +30,7 @@ import {
   Annotation,
   ChantLayoutElement,
   ChantNotationElement,
+  DropCapImage,
   GlyphCode,
   GlyphVisualizer,
   QuickSvg,
@@ -617,7 +618,23 @@ export class ChantScore {
       ) {
         let notation = this.notations[i],
           lyrics = notation.lyrics[0];
-        if (this.useDropCap) {
+
+        // Extract the drop cap letter
+        var letter = lyrics.spans[0].text.slice(0, 1).toUpperCase();
+
+        // Branch: image-based drop cap if map entry exists
+        if (ctxt.dropCapImageMap && ctxt.dropCapImageMap[letter]) {
+          const img = ctxt.dropCapImageMap[letter];
+          this.dropCap = new DropCapImage(
+            ctxt, img.url, img.width, img.height,
+            img.baselineRatio, img.padding
+          );
+          // Strip the letter from lyrics (same as generateDropCap)
+          lyrics.dropCap = this.dropCap;
+          lyrics.spans[0].text = lyrics.spans[0].text.slice(1);
+          lyrics.text = lyrics.text.slice(1);
+          lyrics.centerStartIndex--;
+        } else if (this.useDropCap) {
           this.dropCap = lyrics.generateDropCap(ctxt);
         } else {
           lyrics.dropCap = null;
@@ -812,11 +829,16 @@ export class ChantScore {
       var currentOriginY = this.dropCap.origin.y;
       var scaleFactor = desiredOriginY / currentOriginY;
 
-      // Resize the drop cap font
-      ctxt.textStyles.dropCap.size = ctxt.textStyles.dropCap.size * scaleFactor;
-      this.dropCap.recalculateMetrics(ctxt);
-      this.dropCap.padding =
-        ctxt.staffInterval * ctxt.textStyles.dropCap.padding;
+      // Resize the drop cap
+      if (this.dropCap instanceof DropCapImage) {
+        this.dropCap.rescale(scaleFactor);
+        this.dropCap.padding = ctxt.staffInterval * this.dropCap.paddingMultiplier;
+      } else {
+        ctxt.textStyles.dropCap.size = ctxt.textStyles.dropCap.size * scaleFactor;
+        this.dropCap.recalculateMetrics(ctxt);
+        this.dropCap.padding =
+          ctxt.staffInterval * ctxt.textStyles.dropCap.padding;
+      }
 
       // Pass 2: rebuild all lines with the new (wider) drop cap indent
       this.lines = [];
@@ -925,7 +947,7 @@ export class ChantScore {
 
     // When dropCapLines > 1, use inline font-size on the drop cap to prevent
     // CSS cascade issues (all SVGs share the same .dropCap CSS selector).
-    if (this.dropCapLines > 1 && this.dropCap) {
+    if (this.dropCapLines > 1 && this.dropCap && !(this.dropCap instanceof DropCapImage)) {
       this.dropCap.overrideFontSize = ctxt.textStyles.dropCap.size;
     }
 

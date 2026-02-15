@@ -5,6 +5,7 @@ declare module "exsurge" {
   type Note = unknown;
   type Clef = unknown;
   type DropCap = unknown;
+  type DropCapImage = unknown;
   type Annotation = { recalculateMetrics: (ctxt: ChantContext) => void };
   type Rect = unknown;
   type ExsurgeLanguage = unknown;
@@ -300,6 +301,16 @@ declare module "exsurge" {
     setCanvasSize(width: number, height: number, scale?: number): void;
     mapAnnotationSpansToTextLeft?: AnnotationSpansToTextLeftMapper;
     mergeAnnotationWithTextLeft?: (...annotationSpan: TextSpan[]) => TextSpan[];
+
+    dropCapImageMap?: {
+      [letter: string]: {
+        url: string;
+        width: number;
+        height: number;
+        baselineRatio: number;
+        padding: number;
+      };
+    };
   }
 
   export const TextTypes: TextTypes;

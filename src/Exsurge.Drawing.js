@@ -2917,6 +2917,65 @@ export class DropCap extends TextElement {
   }
 }
 
+export class DropCapImage extends ChantLayoutElement {
+  constructor(ctxt, imageUrl, naturalWidth, naturalHeight, baselineRatio, paddingMultiplier) {
+    super();
+    this.imageUrl = imageUrl;
+    this.naturalWidth = naturalWidth;
+    this.naturalHeight = naturalHeight;
+    this.baselineRatio = baselineRatio;
+
+    // Scale to match single-line drop cap size (textStyles.dropCap.size)
+    var targetHeight = ctxt.textStyles.dropCap.size;
+    var scale = targetHeight / naturalHeight;
+    this.bounds.width = naturalWidth * scale;
+    this.bounds.height = targetHeight;
+
+    // origin.y = how far baseline is from top of image
+    this.origin.y = this.bounds.height * baselineRatio;
+
+    this.padding = ctxt.staffInterval * paddingMultiplier;
+    this.paddingMultiplier = paddingMultiplier;
+  }
+
+  // No-op: image dimensions don't need font-based recalculation
+  recalculateMetrics(ctxt) {}
+
+  // For multi-line scaling: re-scale to new dimensions
+  rescale(scaleFactor) {
+    this.bounds.width *= scaleFactor;
+    this.bounds.height *= scaleFactor;
+    this.origin.y = this.bounds.height * this.baselineRatio;
+  }
+
+  draw(ctxt) {
+    // Canvas fallback — not used in our SVG pipeline but required by interface
+  }
+
+  createSvgNode(ctxt) {
+    return QuickSvg.createNode("image", this.getSvgProps());
+  }
+
+  createSvgTree(ctxt) {
+    return QuickSvg.createSvgTree("image", this.getSvgProps());
+  }
+
+  createSvgFragment(ctxt) {
+    return QuickSvg.createFragment("image", this.getSvgProps());
+  }
+
+  getSvgProps() {
+    return {
+      "xlink:href": this.imageUrl,
+      x: this.bounds.x - this.bounds.width / 2,
+      y: this.bounds.y - this.origin.y,
+      width: this.bounds.width,
+      height: this.bounds.height,
+      class: "dropCapImage"
+    };
+  }
+}
+
 export class TitleTextElement extends TextElement {
   constructor(
     ctxt,
