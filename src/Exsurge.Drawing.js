@@ -2918,7 +2918,7 @@ export class DropCap extends TextElement {
 }
 
 export class DropCapImage extends ChantLayoutElement {
-  constructor(ctxt, imageUrl, naturalWidth, naturalHeight, baselineRatio, paddingMultiplier) {
+  constructor(ctxt, imageUrl, naturalWidth, naturalHeight, baselineRatio, paddingLeftMultiplier, paddingRightMultiplier) {
     super();
     this.imageUrl = imageUrl;
     this.naturalWidth = naturalWidth;
@@ -2934,8 +2934,10 @@ export class DropCapImage extends ChantLayoutElement {
     // origin.y = how far baseline is from top of image
     this.origin.y = this.bounds.height * baselineRatio;
 
-    this.padding = ctxt.staffInterval * paddingMultiplier;
-    this.paddingMultiplier = paddingMultiplier;
+    this.paddingLeft = ctxt.staffInterval * paddingLeftMultiplier;
+    this.paddingRight = ctxt.staffInterval * paddingRightMultiplier;
+    this.paddingLeftMultiplier = paddingLeftMultiplier;
+    this.paddingRightMultiplier = paddingRightMultiplier;
   }
 
   // No-op: image dimensions don't need font-based recalculation

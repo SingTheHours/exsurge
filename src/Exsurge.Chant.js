@@ -627,7 +627,7 @@ export class ChantScore {
           const img = ctxt.dropCapImageMap[letter];
           this.dropCap = new DropCapImage(
             ctxt, img.url, img.width, img.height,
-            img.baselineRatio, img.padding
+            img.baselineRatio, img.paddingLeft, img.paddingRight
           );
           // Strip the letter from lyrics (same as generateDropCap)
           lyrics.dropCap = this.dropCap;
@@ -832,7 +832,8 @@ export class ChantScore {
       // Resize the drop cap
       if (this.dropCap instanceof DropCapImage) {
         this.dropCap.rescale(scaleFactor);
-        this.dropCap.padding = ctxt.staffInterval * this.dropCap.paddingMultiplier;
+        this.dropCap.paddingLeft = ctxt.staffInterval * this.dropCap.paddingLeftMultiplier;
+        this.dropCap.paddingRight = ctxt.staffInterval * this.dropCap.paddingRightMultiplier;
       } else {
         ctxt.textStyles.dropCap.size = ctxt.textStyles.dropCap.size * scaleFactor;
         this.dropCap.recalculateMetrics(ctxt);
@@ -876,7 +877,7 @@ export class ChantScore {
       dcFirstLine = this.lines[0];
       dcLastLine =
         this.lines[Math.min(actualDropCapLines - 1, this.lines.length - 1)];
-      this.dropCap.bounds.x = dcFirstLine.staffLeft / 2;
+      this.dropCap.bounds.x = dcFirstLine.paddingLeft + this.dropCap.bounds.width / 2;
       this.dropCap.bounds.y = dropCapTop + this.dropCap.origin.y;
 
       // For single-line chants with placeholder lines: keep the drop cap at

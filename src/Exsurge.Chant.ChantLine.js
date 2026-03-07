@@ -304,9 +304,9 @@ export class ChantLine extends ChantLayoutElement {
       }
 
       if (this.score.dropCap !== null) {
-        // drop caps and annotations are drawn from their center, so aligning them
-        // horizontally is as easy as this.staffLeft / 2
-        this.score.dropCap.bounds.x = this.staffLeft / 2;
+        // drop caps and annotations are drawn from their center
+        // Position at paddingLeft + half the drop cap width
+        this.score.dropCap.bounds.x = this.paddingLeft + this.score.dropCap.bounds.width / 2;
         if (this.score.dropCapLines <= 1) {
           // Single-line drop cap: position baseline-aligned with line 1's lyrics
           this.score.dropCap.bounds.y =
@@ -754,14 +754,22 @@ export class ChantLine extends ChantLayoutElement {
     if (width > 0) this.staffRight = width;
     else this.staffRight = Infinity; // no limit to staff size
 
+    // Resolve drop cap padding once (supports both split paddingLeft/paddingRight
+    // on DropCapImage and single symmetric padding on font-based DropCap)
+    var dcPadL = 0, dcPadR = 0;
+    if (this.score.dropCap) {
+      var dc = this.score.dropCap;
+      dcPadL = dc.paddingLeft != null ? dc.paddingLeft : dc.padding;
+      dcPadR = dc.paddingRight != null ? dc.paddingRight : dc.padding;
+    }
+
     // If this is the first chant line, then we have to make room for a
     // drop cap and/or annotation, if present
     if (this.notationsStartIndex === 0) {
       var padding = 0;
 
       if (this.score.dropCap)
-        padding =
-          this.score.dropCap.bounds.width + this.score.dropCap.padding * 2;
+        padding = this.score.dropCap.bounds.width + dcPadL + dcPadR;
 
       if (
         this.score.annotation &&
@@ -774,7 +782,7 @@ export class ChantLine extends ChantLayoutElement {
 
       this.staffLeft += padding;
       if (this.score.dropCap)
-        this.paddingLeft = (padding - this.score.dropCap.bounds.width) / 2;
+        this.paddingLeft = dcPadL;
     } else {
       // If this line is within the drop cap span (e.g., line 2 when dropCapLines=2),
       // apply the same staffLeft indent as line 1
@@ -783,10 +791,9 @@ export class ChantLine extends ChantLayoutElement {
         this.score.lines.length < this.score.dropCapLines &&
         this.score.dropCap
       ) {
-        var dcPadding =
-          this.score.dropCap.bounds.width + this.score.dropCap.padding * 2;
+        var dcPadding = this.score.dropCap.bounds.width + dcPadL + dcPadR;
         this.staffLeft += dcPadding;
-        this.paddingLeft = (dcPadding - this.score.dropCap.bounds.width) / 2;
+        this.paddingLeft = dcPadL;
       }
 
       prev = notations[newElementStart - 1];

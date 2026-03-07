@@ -308,7 +308,8 @@ declare module "exsurge" {
         width: number;
         height: number;
         baselineRatio: number;
-        padding: number;
+        paddingLeft: number;
+        paddingRight: number;
       };
     };
   }
