@@ -6,7 +6,7 @@ declare module "exsurge" {
   type Clef = unknown;
   type DropCap = unknown;
   type DropCapImage = unknown;
-  type Annotation = { recalculateMetrics: (ctxt: ChantContext) => void };
+  class Annotation { constructor(ctxt: ChantContext, text: string); recalculateMetrics(ctxt: ChantContext): void; }
   type Rect = unknown;
   type ExsurgeLanguage = unknown;
   type ChantNotationElement = unknown;
@@ -121,7 +121,7 @@ declare module "exsurge" {
   }
 
   export class ChantScore {
-    constructor(ctxt: ChantContext);
+    constructor(ctxt: ChantContext, mappings?: ChantMapping[], useDropCap?: boolean);
 
     mappings: ChantMapping[];
     lines: ChantLine[];
@@ -130,7 +130,7 @@ declare module "exsurge" {
     titles?: Titles;
     startingClef: Clef;
     useDropCap: boolean;
-    dropCap: DropCap;
+    dropCap: DropCap & { overrideFontSize?: number };
     dropCapLines: number;
     annotation: Annotation | null;
     compiled: boolean;
@@ -143,6 +143,7 @@ declare module "exsurge" {
     updateSelection(selection: Selection);
     createSvgTree(ctxt: ChantContext, zoom?: number): SvgTreeNode;
     createSvg(ctxt: ChantContext): string;
+    createSvgNodeForEachLine(ctxt: ChantContext): SVGSVGElement[];
     recreateDropCap(ctxt: ChantContext): void;
     updateNotations(ctxt: ChantContext): void;
     performLayout(ctxt: ChantContext, forceLayout?: boolean): void;
@@ -211,11 +212,15 @@ declare module "exsurge" {
     lyricTextColor: string;
     rubricColor: string;
 
+    noteIdPrefix: string;
+    episemaLineWeight?: number;
+    neumeLineWeight: number;
+    modernAccidentals: boolean;
     specialCharProperties: { [key: string]: string };
     specialCharText?: (char: string) => string;
     textBeforeSpecialChar: string;
     textAfterSpecialChar: string;
-    specialCharMap: { [key in "℣" | "℟" | "*" | "+"]: string };
+    specialCharMap: { [key: string]: string };
     asteriskProperties: { [key: string]: string };
     plusProperties: { [key: string]: string };
     fontStyleDictionary: {
