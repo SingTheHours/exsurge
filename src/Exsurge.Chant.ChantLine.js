@@ -331,14 +331,27 @@ export class ChantLine extends ChantLayoutElement {
       this.notationBounds.union(lyricAndTextRect);
     }
     if (this.numAltLines > 0) {
+      // altLineHeight comes from measureSubstringBBox, which under the Canvas
+      // strategy is built from actualBoundingBoxAscent/Descent: the ink
+      // bounds of the text, not the font's ascent. Without a margin the top
+      // of the line (and so of the svg) sits exactly on that measured ink
+      // top, and the browser's rendered glyphs (antialiasing, the overshoot
+      // of a round or italic capital such as the O of "Omnes") are clipped
+      // by the svg's overflow. Reserve 0.4em of the above-lines text size
+      // above it: in Chromium the rendered text box of an "Omnes" cue began
+      // 3.72px above the svg at a 10.97px font, ~0.34em, and 0.4em leaves
+      // headroom while growing only lines that carry <alt> text. The text
+      // itself is not moved (see altLineBaseline).
+      var aboveLinesTopMargin = 0.4 * ctxt.textStyles.al.size;
       var altLineTextRect = new Rect(
         0,
         this.notationBounds.y -
           this.altLineHeight -
           0.5 * ctxt.staffInterval -
-          aboveLinesLineHeight * (this.numAltLines - 1),
+          aboveLinesLineHeight * (this.numAltLines - 1) -
+          aboveLinesTopMargin,
         0,
-        aboveLinesLineHeight * this.numAltLines
+        aboveLinesLineHeight * this.numAltLines + aboveLinesTopMargin
       );
       this.notationBounds.union(altLineTextRect);
     }
